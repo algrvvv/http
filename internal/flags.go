@@ -75,7 +75,7 @@ func ParseAndGetRequest() (Request, error) {
 func parseCommandLine(req *Request) error {
 	args := flag.Args()
 	if len(args) >= 2 {
-		req.Method = args[0]
+		req.Method = strings.ToUpper(args[0])
 		req.URL = checkAndGetURL(args[1])
 		return nil
 	} else {
