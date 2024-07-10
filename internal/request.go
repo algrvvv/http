@@ -58,11 +58,13 @@ func (r *Response) FormatOutput() {
 
 	fmt.Println("\n")
 
-	decodedBody, err := decodeUnicodeEscapes(r.Body)
-	if err != nil {
-		fmt.Println(string(r.Body) + "\n\n")
-	} else {
-		fmt.Println(decodedBody + "\n\n")
+	if !*WithoutBody {
+		decodedBody, err := decodeUnicodeEscapes(r.Body)
+		if err != nil {
+			fmt.Println(string(r.Body) + "\n\n")
+		} else {
+			fmt.Println(decodedBody + "\n\n")
+		}
 	}
 }
 
@@ -102,7 +104,6 @@ func (r Request) getResponse() (Response, error) {
 	}
 
 	var client = &http.Client{}
-	fmt.Println(r.Redirect)
 	if r.Redirect {
 		client = &http.Client{
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {

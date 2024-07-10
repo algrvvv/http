@@ -13,15 +13,16 @@ const (
 )
 
 var (
-	help       = flag.BoolP("help", "h", false, "show help message")
-	version    = flag.BoolP("version", "v", false, "show version info")
-	timeout    = flag.UintP("timeout", "t", 0, "timeout in seconds")
-	cookies    = flag.StringP("cookies", "c", "", "cookies for request")
-	proxy      = flag.StringP("proxy", "p", "", "proxy to use")
-	useragent  = flag.StringP("user-agent", "u", "", "user-agent to use")
-	redirect   = flag.BoolP("redirect", "r", false, "redirect after successful request")
-	headers    = flag.StringP("headers", "H", "", "list of header names, separated by semicolons")
-	AllHeaders = flag.BoolP("all-headers", "A", false, "show all header names")
+	help        = flag.BoolP("help", "h", false, "show help message")
+	version     = flag.BoolP("version", "v", false, "show version info")
+	timeout     = flag.UintP("timeout", "t", 0, "timeout in seconds")
+	cookies     = flag.StringP("cookies", "c", "", "cookies for request")
+	proxy       = flag.StringP("proxy", "p", "", "proxy to use")
+	useragent   = flag.StringP("user-agent", "u", "", "user-agent to use")
+	redirect    = flag.BoolP("redirect", "r", false, "redirect after successful request")
+	headers     = flag.StringP("headers", "H", "", "list of header names, separated by semicolons")
+	AllHeaders  = flag.BoolP("all-headers", "A", false, "show all header names")
+	WithoutBody = flag.BoolP("without-body", "W", false, "dont show request body")
 )
 
 type InvalidFlagOrOption struct {
