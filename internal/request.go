@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -17,7 +18,7 @@ type Response struct {
 	Status    string        // статус ответа
 	FinalLink string        // итоговая ссылка, на которой оставновился запрос
 	Header    http.Header   // заголовки
-	Body      string        // тело ответа
+	Body      []byte        // тело ответа
 	TimeLoad  time.Duration // время ответа
 }
 
@@ -56,7 +57,12 @@ func (r *Response) FormatOutput() {
 
 	fmt.Println("\n")
 
-	fmt.Println(r.Body + "\n\n")
+	decodedBody, err := decodeUnicodeEscapes(r.Body)
+	if err != nil {
+		fmt.Println(string(r.Body) + "\n\n")
+	} else {
+		fmt.Println(decodedBody + "\n\n")
+	}
 }
 
 type Request struct {
@@ -121,7 +127,7 @@ func (r Request) getResponse() (Response, error) {
 		Code:      resp.StatusCode,
 		TimeLoad:  loadTime,
 		Header:    resp.Header,
-		Body:      string(body),
+		Body:      body,
 		Protocol:  resp.Proto,
 		Status:    resp.Status,
 	}, nil
@@ -165,8 +171,16 @@ func (r Request) getResponseWithTimeout() (Response, error) {
 		Code:      resp.StatusCode,
 		TimeLoad:  loadTime,
 		Header:    resp.Header,
-		Body:      string(body),
+		Body:      body,
 		Protocol:  resp.Proto,
 		Status:    resp.Status,
 	}, nil
+}
+
+func decodeUnicodeEscapes(data []byte) (string, error) {
+	str, err := strconv.Unquote(strings.Replace(strconv.Quote(string(data)), `\\u`, `\u`, -1))
+	if err != nil {
+		return "", err
+	}
+	return str, nil
 }
