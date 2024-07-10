@@ -3,12 +3,24 @@
 ### Применение
 
 ```shell
-$ http GET http://localhost:8000
-
+$ http GET http://localhost:8000/api/data
 HTTP/1.1 200 OK
-Content-Length: 16
-Content-Type: text/plain; charset=utf-8
-Date: Fri, 03 Dec 2021 23:20:15 GMT
+Final url:  http://localhost:8000/api/data?key=secret
+Date : Wed, 10 Jul 2024 09:19:45 GMT
+Content-Type : application/json
 
-some response from server
+
+{"status":200,"message":"success"}
+
 ```
+
+### TODO
+
+- [ ] Сделать использование куков
+- [ ] Сделать использование заголовков
+- [ ] Сделать удобное использование тела запроса
+- [ ] Сделать доп флаг для вывода данных без тела ответа
+- [ ] Сделать использование юзер агентов
+- [ ] Сделать использование прокси
+- [ ] Вынести логику запроса в отдельную функцию, а не повторять код
+- [ ] Сделать нормальную документацию
