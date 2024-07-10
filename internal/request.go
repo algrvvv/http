@@ -43,6 +43,7 @@ func (r *Response) statusCode() string {
 func (r *Response) FormatOutput() {
 	fmt.Printf("%s %s\n", r.proto(), r.statusCode())
 	fmt.Println("Final url: ", r.FinalLink)
+	fmt.Println("Response time: ", r.TimeLoad)
 	if *AllHeaders {
 		for k, v := range r.Header {
 			fmt.Println(k, ":", strings.Join(v, ","))
