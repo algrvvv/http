@@ -102,10 +102,17 @@ func (r Request) getResponse() (Response, error) {
 	}
 
 	var client = &http.Client{}
+	fmt.Println(r.Redirect)
 	if r.Redirect {
 		client = &http.Client{
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
 				return nil
+			},
+		}
+	} else {
+		client = &http.Client{
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
 			},
 		}
 	}
@@ -150,6 +157,12 @@ func (r Request) getResponseWithTimeout() (Response, error) {
 		client = &http.Client{
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
 				return nil
+			},
+		}
+	} else {
+		client = &http.Client{
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
 			},
 		}
 	}
