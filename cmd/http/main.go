@@ -7,7 +7,7 @@ import (
 
 func main() {
 	// получаем реквест
-	req, err := internal.ParseUtilOptions()
+	req, err := internal.ParseAndGetRequest()
 	if err != nil {
 		logger.Logger(err, logger.ExitLogType)
 	}
@@ -19,5 +19,10 @@ func main() {
 		return
 	}
 
-	logger.Logger(req, logger.InfoLogType)
+	resp, err := req.MakeRequest()
+	if err != nil {
+		logger.Logger(err, logger.ExitLogType)
+	}
+
+	resp.FormatOutput()
 }
