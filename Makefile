@@ -3,17 +3,19 @@ EXECUTABLE := http
 SRC := cmd/http/main.go
 
 install:
-	go install $(SRC)
+	@go install $(SRC)
 
 build:
-	mkdir -p $(BIN_DIR)
-	go build -o $(BIN_DIR)/$(EXECUTABLE) $(SRC)
+	@mkdir -p $(BIN_DIR)
+	@go build -o $(BIN_DIR)/$(EXECUTABLE) $(SRC)
+	@echo "билд заверешен"
 
 gr:
-	go run $(SRC)
+	@go run $(SRC)
 
 run: build
-	./$(BIN_DIR)/$(EXECUTABLE)
+	@./$(BIN_DIR)/$(EXECUTABLE)
 
 clean:
-	rm -rf $(BIN_DIR)/
+	@rm -rf $(BIN_DIR)/
+	@echo "папка билда очищена"
