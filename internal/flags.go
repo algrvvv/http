@@ -9,7 +9,9 @@ import (
 )
 
 const (
-	VERSION = "0.0.1"
+	BANNER          = " _     _   _           _           \n| |   | | | |         | |          \n| |__ | |_| |_ _ __   | |__  _   _ \n| '_ \\| __| __| '_ \\  | '_ \\| | | |\n| | | | |_| |_| |_) | | |_) | |_| |\n|_| |_|\\__|\\__| .__/  |_.__/ \\__, |\n              | |             __/ |\n              |_|            |___/ \n               _                                \n   ____       | |                               \n  / __ \\  __ _| | __ _ _ ____   ____   ____   __\n / / _` |/ _` | |/ _` | '__\\ \\ / /\\ \\ / /\\ \\ / /\n| | (_| | (_| | | (_| | |   \\ V /  \\ V /  \\ V / \n \\ \\__,_|\\__,_|_|\\__, |_|    \\_/    \\_/    \\_/  \n  \\____/          __/ |                         \n                 |___/                          \n"
+	VERSION         = "0.4.17"
+	REPOSITORY_LINK = "https://github.com/algrvvv/http"
 )
 
 var (
@@ -85,11 +87,13 @@ func parseCommandLine(req *Request) error {
 }
 
 func printHelpMessage() {
-	fmt.Println("http is util by golang and @algrvvv")
+	fmt.Printf("Usage: http [method] [url] [flags...]\n\n")
+	flag.PrintDefaults()
+	// fmt.Printf("\t-t | --timeout\t\tspecify the number of seconds to wait for the request to complete\n")
 }
 
 func printVersionMessage() {
-	fmt.Println("version:", VERSION)
+	fmt.Printf("%s\nCurrent version is %s\nRepository: %s\n", BANNER, VERSION, REPOSITORY_LINK)
 }
 
 func checkAndGetURL(url string) string {
