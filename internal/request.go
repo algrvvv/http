@@ -13,13 +13,14 @@ import (
 )
 
 type Response struct {
-	Protocol  string        // протокол
-	Code      int           // код ответа
-	Status    string        // статус ответа
-	FinalLink string        // итоговая ссылка, на которой оставновился запрос
-	Header    http.Header   // заголовки
-	Body      []byte        // тело ответа
-	TimeLoad  time.Duration // время ответа
+	Protocol     string        // протокол
+	Code         int           // код ответа
+	Status       string        // статус ответа
+	FinalLink    string        // итоговая ссылка, на которой оставновился запрос
+	RedirectLink string        // ссылка переадресации, если есть
+	Header       http.Header   // заголовки
+	Body         []byte        // тело ответа
+	TimeLoad     time.Duration // время ответа
 }
 
 var shortListOfHeaders = []string{
@@ -43,6 +44,9 @@ func (r *Response) statusCode() string {
 func (r *Response) FormatOutput() {
 	fmt.Printf("%s %s\n", r.proto(), r.statusCode())
 	fmt.Println("Final url: ", r.FinalLink)
+	if r.RedirectLink != "" {
+		fmt.Println("Redirect url: ", r.RedirectLink)
+	}
 	fmt.Println("Response time: ", r.TimeLoad)
 	if *AllHeaders {
 		for k, v := range r.Header {
@@ -144,14 +148,23 @@ func (r Request) makeRequestWrapper(req *http.Request) (Response, error) {
 		return Response{}, err
 	}
 
+	var redirectURL string
+	redirectLink, err := resp.Location()
+	if err != nil {
+		redirectURL = ""
+	} else {
+		redirectURL = redirectLink.String()
+	}
+
 	return Response{
-		FinalLink: resp.Request.URL.String(),
-		Code:      resp.StatusCode,
-		TimeLoad:  loadTime,
-		Header:    resp.Header,
-		Body:      body,
-		Protocol:  resp.Proto,
-		Status:    resp.Status,
+		FinalLink:    resp.Request.URL.String(),
+		RedirectLink: redirectURL,
+		Code:         resp.StatusCode,
+		TimeLoad:     loadTime,
+		Header:       resp.Header,
+		Body:         body,
+		Protocol:     resp.Proto,
+		Status:       resp.Status,
 	}, nil
 }
 
