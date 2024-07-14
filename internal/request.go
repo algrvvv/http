@@ -96,63 +96,26 @@ func (r Request) MakeRequest() (Response, error) {
 }
 
 func (r Request) getResponse() (Response, error) {
-	start := time.Now()
-
 	req, err := http.NewRequest(r.Method, r.URL, nil)
 	if err != nil {
 		return Response{}, err
 	}
-
-	var client = &http.Client{}
-	if r.Redirect {
-		client = &http.Client{
-			CheckRedirect: func(req *http.Request, via []*http.Request) error {
-				return nil
-			},
-		}
-	} else {
-		client = &http.Client{
-			CheckRedirect: func(req *http.Request, via []*http.Request) error {
-				return http.ErrUseLastResponse
-			},
-		}
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return Response{}, err
-	}
-	defer resp.Body.Close()
-
-	loadTime := time.Since(start)
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return Response{}, err
-	}
-
-	return Response{
-		FinalLink: resp.Request.URL.String(),
-		Code:      resp.StatusCode,
-		TimeLoad:  loadTime,
-		Header:    resp.Header,
-		Body:      body,
-		Protocol:  resp.Proto,
-		Status:    resp.Status,
-	}, nil
+	return r.makeRequestWrapper(req)
 }
 
 func (r Request) getResponseWithTimeout() (Response, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), r.Timeout*time.Second)
 	defer cancel()
 
-	start := time.Now()
-
 	req, err := http.NewRequestWithContext(ctx, r.Method, r.URL, nil)
 	if err != nil {
 		return Response{}, err
 	}
+	return r.makeRequestWrapper(req)
+}
 
+func (r Request) makeRequestWrapper(req *http.Request) (Response, error) {
+	start := time.Now()
 	var client = &http.Client{}
 	if r.Redirect {
 		client = &http.Client{
