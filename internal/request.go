@@ -2,14 +2,16 @@ package internal
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
-	"github.com/algrvvv/http/internal/logger"
 	"io"
 	"net/http"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/algrvvv/http/internal/logger"
 )
 
 type Response struct {
@@ -73,15 +75,16 @@ func (r *Response) FormatOutput() {
 }
 
 type Request struct {
-	Method    string        // метод запроса
-	URL       string        // линк для запроса
-	Body      []byte        // тело запроса
-	Headers   string        // заголовки
-	UserAgent string        // юзер агент
-	Cookies   string        // куки
-	Proxy     string        // TODO прокси
-	Timeout   time.Duration // время выделенное на запрос
-	Redirect  bool          // Следовать ли за редиректами
+	Method          string        // метод запроса
+	URL             string        // линк для запроса
+	Body            []byte        // тело запроса
+	Headers         string        // заголовки
+	UserAgent       string        // юзер агент
+	Cookies         string        // куки
+	Proxy           string        // TODO прокси
+	Timeout         time.Duration // время выделенное на запрос
+	Redirect        bool          // Следовать ли за редиректами
+	IgnoreCertCheck bool          // игнорирования проверки сертификатов (удобно для локального тестирования)
 }
 
 func (r Request) MakeRequest() (Response, error) {
@@ -131,6 +134,14 @@ func (r Request) makeRequestWrapper(req *http.Request) (Response, error) {
 		client = &http.Client{
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
 				return http.ErrUseLastResponse
+			},
+		}
+	}
+
+	if r.IgnoreCertCheck {
+		client.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
 			},
 		}
 	}
