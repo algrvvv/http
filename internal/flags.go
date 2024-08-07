@@ -10,21 +10,22 @@ import (
 
 const (
 	BANNER          = " _     _   _           _           \n| |   | | | |         | |          \n| |__ | |_| |_ _ __   | |__  _   _ \n| '_ \\| __| __| '_ \\  | '_ \\| | | |\n| | | | |_| |_| |_) | | |_) | |_| |\n|_| |_|\\__|\\__| .__/  |_.__/ \\__, |\n              | |             __/ |\n              |_|            |___/ \n               _                                \n   ____       | |                               \n  / __ \\  __ _| | __ _ _ ____   ____   ____   __\n / / _` |/ _` | |/ _` | '__\\ \\ / /\\ \\ / /\\ \\ / /\n| | (_| | (_| | | (_| | |   \\ V /  \\ V /  \\ V / \n \\ \\__,_|\\__,_|_|\\__, |_|    \\_/    \\_/    \\_/  \n  \\____/          __/ |                         \n                 |___/                          \n"
-	VERSION         = "0.4.19"
+	VERSION         = "0.4.29"
 	REPOSITORY_LINK = "https://github.com/algrvvv/http"
 )
 
 var (
-	help        = flag.BoolP("help", "h", false, "show help message")
-	version     = flag.BoolP("version", "v", false, "show version info")
-	timeout     = flag.UintP("timeout", "t", 0, "number of seconds to wait for the request to complete")
-	cookies     = flag.StringP("cookies", "c", "", "(TODO) cookies for request")
-	proxy       = flag.StringP("proxy", "p", "", "(TODO) proxy for request")
-	useragent   = flag.StringP("user-agent", "u", "", "(TODO) user-agent for request")
-	redirect    = flag.BoolP("redirect", "r", false, "whether to follow redirects")
-	headers     = flag.StringP("headers", "H", "", "(TODO) list of header names, separated by semicolons")
-	AllHeaders  = flag.BoolP("all-headers", "A", false, "show all headers")
-	WithoutBody = flag.BoolP("without-body", "W", false, "dont show request body")
+	help            = flag.BoolP("help", "h", false, "show help message")
+	version         = flag.BoolP("version", "v", false, "show version info")
+	timeout         = flag.UintP("timeout", "t", 0, "number of seconds to wait for the request to complete")
+	cookies         = flag.StringP("cookies", "c", "", "(TODO) cookies for request")
+	proxy           = flag.StringP("proxy", "p", "", "(TODO) proxy for request")
+	useragent       = flag.StringP("user-agent", "u", "", "(TODO) user-agent for request")
+	redirect        = flag.BoolP("redirect", "r", false, "whether to follow redirects")
+	headers         = flag.StringP("headers", "H", "", "(TODO) list of header names, separated by semicolons")
+	AllHeaders      = flag.BoolP("all-headers", "A", false, "show all headers")
+	WithoutBody     = flag.BoolP("without-body", "W", false, "dont show request body")
+	ignoreCertCheck = flag.BoolP("ignore-cert-check", "I", false, "ignore certificate check")
 )
 
 type InvalidFlagOrOption struct {
@@ -59,12 +60,13 @@ func ParseAndGetRequest() (Request, error) {
 	}
 
 	req := Request{
-		Timeout:   time.Duration(*timeout),
-		Cookies:   *cookies,
-		Proxy:     *proxy,
-		UserAgent: *useragent,
-		Headers:   *headers,
-		Redirect:  *redirect,
+		Timeout:         time.Duration(*timeout),
+		Cookies:         *cookies,
+		Proxy:           *proxy,
+		UserAgent:       *useragent,
+		Headers:         *headers,
+		Redirect:        *redirect,
+		IgnoreCertCheck: *ignoreCertCheck,
 	}
 
 	err := parseCommandLine(&req)
