@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"fmt"
@@ -75,16 +76,16 @@ func (r *Response) FormatOutput() {
 }
 
 type Request struct {
-	Method          string        // метод запроса
-	URL             string        // линк для запроса
-	Body            []byte        // тело запроса
-	Headers         string        // заголовки
-	UserAgent       string        // юзер агент
-	Cookies         string        // куки
-	Proxy           string        // TODO прокси
-	Timeout         time.Duration // время выделенное на запрос
-	Redirect        bool          // Следовать ли за редиректами
-	IgnoreCertCheck bool          // игнорирования проверки сертификатов (удобно для локального тестирования)
+	Method          string            // метод запроса
+	URL             string            // линк для запроса
+	Body            []byte            // тело запроса
+	Headers         map[string]string // заголовки
+	UserAgent       string            // юзер агент
+	Cookies         string            // куки
+	Proxy           string            // TODO прокси
+	Timeout         time.Duration     // время выделенное на запрос
+	Redirect        bool              // Следовать ли за редиректами
+	IgnoreCertCheck bool              // игнорирования проверки сертификатов (удобно для локального тестирования)
 }
 
 func (r Request) MakeRequest() (Response, error) {
@@ -103,7 +104,8 @@ func (r Request) MakeRequest() (Response, error) {
 }
 
 func (r Request) getResponse() (Response, error) {
-	req, err := http.NewRequest(r.Method, r.URL, nil)
+	logger.Logger(string(r.Body), logger.SuccessLogType)
+	req, err := http.NewRequest(r.Method, r.URL, bytes.NewReader(r.Body))
 	if err != nil {
 		return Response{}, err
 	}
@@ -114,7 +116,7 @@ func (r Request) getResponseWithTimeout() (Response, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), r.Timeout*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, r.Method, r.URL, nil)
+	req, err := http.NewRequestWithContext(ctx, r.Method, r.URL, bytes.NewReader(r.Body))
 	if err != nil {
 		return Response{}, err
 	}
@@ -122,8 +124,13 @@ func (r Request) getResponseWithTimeout() (Response, error) {
 }
 
 func (r Request) makeRequestWrapper(req *http.Request) (Response, error) {
+	// change headers
+	for key, value := range r.Headers {
+		req.Header.Add(key, value)
+	}
+
 	start := time.Now()
-	var client = &http.Client{}
+	client := &http.Client{}
 	if r.Redirect {
 		client = &http.Client{
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
