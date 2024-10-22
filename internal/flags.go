@@ -50,7 +50,13 @@ func (s *stringList) getHeaders() map[string]string {
 }
 
 var (
-	headers stringList
+	headers     stringList
+	jsonHeaders = flag.BoolP(
+		"json",
+		"J",
+		false,
+		"use if you want to set header to content-type: application/json",
+	)
 
 	help    = flag.BoolP("help", "h", false, "show help message")
 	version = flag.BoolP("version", "v", false, "show version info")
@@ -93,6 +99,10 @@ func (e MissingFlagOrOption) Error() string {
 func ParseAndGetRequest() (Request, error) {
 	flag.VarP(&headers, "headers", "H", "request headers")
 	flag.Parse()
+
+	if *jsonHeaders {
+		_ = headers.Set("Content-Type: application/json")
+	}
 
 	if *version {
 		printVersionMessage()
