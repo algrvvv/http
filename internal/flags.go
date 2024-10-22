@@ -14,18 +14,60 @@ const (
 	REPOSITORY_LINK = "https://github.com/algrvvv/http"
 )
 
+type stringList []string
+
+func (s *stringList) String() string {
+	return strings.Join(*s, ",")
+}
+
+func (s *stringList) Set(str string) error {
+	*s = append(*s, str)
+	return nil
+}
+
+func (s *stringList) Type() string {
+	return "stringList"
+}
+
+func (s *stringList) getHeaders() map[string]string {
+	split := strings.Split(s.String(), ",")
+	m := make(map[string]string)
+
+	var h []string
+	for _, str := range split {
+		h = strings.Split(str, ":")
+		if len(h) != 2 {
+			return nil
+		}
+
+		// h[0] - name of header
+		// h[1] - values of header
+
+		m[h[0]] = h[1]
+	}
+
+	return m
+}
+
 var (
-	help            = flag.BoolP("help", "h", false, "show help message")
-	version         = flag.BoolP("version", "v", false, "show version info")
-	timeout         = flag.UintP("timeout", "t", 0, "number of seconds to wait for the request to complete")
+	headers stringList
+
+	help    = flag.BoolP("help", "h", false, "show help message")
+	version = flag.BoolP("version", "v", false, "show version info")
+	timeout = flag.UintP(
+		"timeout",
+		"t",
+		0,
+		"number of seconds to wait for the request to complete",
+	)
 	cookies         = flag.StringP("cookies", "c", "", "(TODO) cookies for request")
 	proxy           = flag.StringP("proxy", "p", "", "(TODO) proxy for request")
 	useragent       = flag.StringP("user-agent", "u", "", "(TODO) user-agent for request")
 	redirect        = flag.BoolP("redirect", "r", false, "whether to follow redirects")
-	headers         = flag.StringP("headers", "H", "", "(TODO) list of header names, separated by semicolons")
 	AllHeaders      = flag.BoolP("all-headers", "A", false, "show all headers")
-	WithoutBody     = flag.BoolP("without-body", "W", false, "dont show request body")
+	WithoutBody     = flag.BoolP("without-body", "W", false, "dont show response body")
 	ignoreCertCheck = flag.BoolP("ignore-cert-check", "I", false, "ignore certificate check")
+	RequestBody     = flag.StringP("body", "b", "", "request body example: '{\"key\":\"value\"}'")
 )
 
 type InvalidFlagOrOption struct {
@@ -44,11 +86,12 @@ func (e MissingFlagOrOption) Error() string {
 	if e.mflag != "" {
 		return fmt.Sprintf("Был пропущен недостающий флаг: %s", e.mflag)
 	} else {
-		return fmt.Sprintf("Пропущены критически важные для работы аргументы.\nИспользуетя -help, чтобы узнать о том, как пользоваться")
+		return "Пропущены критически важные для работы аргументы.\nИспользуетя -help, чтобы узнать о том, как пользоваться"
 	}
 }
 
 func ParseAndGetRequest() (Request, error) {
+	flag.VarP(&headers, "headers", "H", "request headers")
 	flag.Parse()
 
 	if *version {
@@ -64,9 +107,10 @@ func ParseAndGetRequest() (Request, error) {
 		Cookies:         *cookies,
 		Proxy:           *proxy,
 		UserAgent:       *useragent,
-		Headers:         *headers,
+		Headers:         headers.getHeaders(),
 		Redirect:        *redirect,
 		IgnoreCertCheck: *ignoreCertCheck,
+		Body:            []byte(*RequestBody),
 	}
 
 	err := parseCommandLine(&req)
