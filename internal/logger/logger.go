@@ -14,7 +14,7 @@ const (
 
 func Logger(log any, logType int) {
 	if logType == SuccessLogType {
-		fmt.Printf("[%s] - %v\n", Green("SUC"), log)
+		fmt.Printf("[%s] - %v\n", Green("SUCC"), log)
 	} else if logType == InfoLogType {
 		fmt.Printf("[%s] - %v\n", Blue("INFO"), log)
 	} else if logType == ErrorLogType {
