@@ -24,5 +24,10 @@ func main() {
 		logger.Logger(err, logger.ExitLogType)
 	}
 
-	resp.FormatOutput()
+	if err := resp.FormatOutput(); err != nil {
+		logger.Logger(err, logger.ExitLogType)
+	}
+	if err := resp.StatusError(); err != nil {
+		logger.Logger(err, logger.ExitLogType)
+	}
 }
