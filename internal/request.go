@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -16,13 +19,15 @@ import (
 )
 
 type Response struct {
-	Protocol     string        // протокол
-	Code         int           // код ответа
-	Status       string        // статус ответа
-	FinalLink    string        // итоговая ссылка, на которой оставновился запрос
-	RedirectLink string        // ссылка переадресации, если есть
-	Header       http.Header   // заголовки
-	Body         []byte        // тело ответа
+	Protocol     string      // протокол
+	Code         int         // код ответа
+	Status       string      // статус ответа
+	FinalLink    string      // итоговая ссылка, на которой оставновился запрос
+	RedirectLink string      // ссылка переадресации, если есть
+	Header       http.Header // заголовки
+	Body         []byte      // тело ответа
+	TotalTime    time.Duration
+	Redirects    []string
 	TimeLoad     time.Duration // время ответа
 }
 
@@ -44,7 +49,17 @@ func (r *Response) statusCode() string {
 	}
 }
 
-func (r *Response) FormatOutput() {
+func (r *Response) FormatOutput() error {
+	if *verbose {
+		for _, hop := range r.Redirects {
+			fmt.Fprintln(os.Stderr, "Redirect:", hop)
+		}
+		fmt.Fprintln(os.Stderr, "Total time:", r.TotalTime)
+	}
+	if *bodyOnly {
+		_, err := os.Stdout.Write(r.Body)
+		return err
+	}
 	fmt.Printf("%s %s\n", r.proto(), r.statusCode())
 	fmt.Println("Final url: ", r.FinalLink)
 	if r.RedirectLink != "" {
@@ -63,9 +78,16 @@ func (r *Response) FormatOutput() {
 		}
 	}
 
-	fmt.Println("\n")
+	fmt.Println()
 
 	if !*WithoutBody {
+		if *pretty {
+			var formatted bytes.Buffer
+			if json.Indent(&formatted, r.Body, "", "  ") == nil {
+				fmt.Println(formatted.String())
+				return nil
+			}
+		}
 		decodedBody, err := decodeUnicodeEscapes(r.Body)
 		if err != nil {
 			fmt.Println(string(r.Body) + "\n\n")
@@ -73,86 +95,81 @@ func (r *Response) FormatOutput() {
 			fmt.Println(decodedBody + "\n\n")
 		}
 	}
+	return nil
+}
+
+func (r Response) StatusError() error {
+	if *fail && r.Code >= 400 && r.Code < 600 {
+		return fmt.Errorf("HTTP %s", r.Status)
+	}
+	return nil
 }
 
 type Request struct {
-	Method          string            // метод запроса
-	URL             string            // линк для запроса
-	Body            []byte            // тело запроса
-	Headers         map[string]string // заголовки
-	UserAgent       string            // юзер агент
-	Cookies         string            // куки
-	Proxy           string            // TODO прокси
-	Timeout         time.Duration     // время выделенное на запрос
-	Redirect        bool              // Следовать ли за редиректами
-	IgnoreCertCheck bool              // игнорирования проверки сертификатов (удобно для локального тестирования)
+	Method          string        // метод запроса
+	URL             string        // линк для запроса
+	Body            []byte        // тело запроса
+	Headers         http.Header   // заголовки
+	UserAgent       string        // юзер агент
+	Cookies         string        // куки
+	Proxy           string        // прокси
+	Timeout         time.Duration // время выделенное на запрос
+	Redirect        bool          // Следовать ли за редиректами
+	IgnoreCertCheck bool          // игнорирования проверки сертификатов (удобно для локального тестирования)
 }
 
 func (r Request) MakeRequest() (Response, error) {
-	var (
-		resp Response
-		err  error
-	)
-
+	ctx := context.Background()
 	if r.Timeout != 0 {
-		resp, err = r.getResponseWithTimeout()
-	} else {
-		resp, err = r.getResponse()
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, r.Timeout*time.Second)
+		defer cancel()
 	}
-
-	return resp, err
-}
-
-func (r Request) getResponse() (Response, error) {
-	logger.Logger(string(r.Body), logger.SuccessLogType)
-	req, err := http.NewRequest(r.Method, r.URL, bytes.NewReader(r.Body))
-	if err != nil {
-		return Response{}, err
-	}
-	return r.makeRequestWrapper(req)
-}
-
-func (r Request) getResponseWithTimeout() (Response, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), r.Timeout*time.Second)
-	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, r.Method, r.URL, bytes.NewReader(r.Body))
 	if err != nil {
 		return Response{}, err
 	}
-	return r.makeRequestWrapper(req)
-}
+	if r.Headers != nil {
+		req.Header = r.Headers.Clone()
+	}
+	if r.UserAgent != "" {
+		req.Header.Set("User-Agent", r.UserAgent)
+	}
+	if r.Cookies != "" {
+		req.Header.Add("Cookie", r.Cookies)
+	}
 
-func (r Request) makeRequestWrapper(req *http.Request) (Response, error) {
-	// change headers
-	for key, value := range r.Headers {
-		req.Header.Add(key, value)
+	var redirects []string
+	client := &http.Client{
+		CheckRedirect: func(next *http.Request, via []*http.Request) error {
+			if !r.Redirect {
+				return http.ErrUseLastResponse
+			}
+			if len(via) >= 10 {
+				return fmt.Errorf("stopped after 10 redirect attempts")
+			}
+			redirects = append(redirects, fmt.Sprintf("%s -> %s", via[len(via)-1].URL, next.URL))
+			return nil
+		},
+	}
+	if r.IgnoreCertCheck || r.Proxy != "" {
+		transport := http.DefaultTransport.(*http.Transport).Clone()
+		defer transport.CloseIdleConnections()
+		if r.IgnoreCertCheck {
+			transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		}
+		if r.Proxy != "" {
+			proxyURL, err := url.Parse(r.Proxy)
+			if err != nil || proxyURL.Host == "" || proxyURL.Scheme == "" {
+				return Response{}, fmt.Errorf("invalid proxy URL: expected scheme://host[:port]")
+			}
+			transport.Proxy = http.ProxyURL(proxyURL)
+		}
+		client.Transport = transport
 	}
 
 	start := time.Now()
-	client := &http.Client{}
-	if r.Redirect {
-		client = &http.Client{
-			CheckRedirect: func(req *http.Request, via []*http.Request) error {
-				return nil
-			},
-		}
-	} else {
-		client = &http.Client{
-			CheckRedirect: func(req *http.Request, via []*http.Request) error {
-				return http.ErrUseLastResponse
-			},
-		}
-	}
-
-	if r.IgnoreCertCheck {
-		client.Transport = &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		}
-	}
-
 	resp, err := client.Do(req)
 	if err != nil {
 		return Response{}, err
@@ -161,10 +178,14 @@ func (r Request) makeRequestWrapper(req *http.Request) (Response, error) {
 
 	loadTime := time.Since(start)
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return Response{}, err
+	var body []byte
+	if !*WithoutBody {
+		body, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return Response{}, err
+		}
 	}
+	totalTime := time.Since(start)
 
 	var redirectURL string
 	redirectLink, err := resp.Location()
@@ -179,6 +200,8 @@ func (r Request) makeRequestWrapper(req *http.Request) (Response, error) {
 		RedirectLink: redirectURL,
 		Code:         resp.StatusCode,
 		TimeLoad:     loadTime,
+		TotalTime:    totalTime,
+		Redirects:    redirects,
 		Header:       resp.Header,
 		Body:         body,
 		Protocol:     resp.Proto,
