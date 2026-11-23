@@ -20,7 +20,7 @@ func Logger(log any, logType int) {
 	} else if logType == ErrorLogType {
 		fmt.Printf("[%s] - %v\n", Red("ERR"), log)
 	} else if logType == ExitLogType {
-		fmt.Printf("[%s] - %v\n", Red("EXIT"), log)
-		os.Exit(0)
+		fmt.Fprintln(os.Stderr, log)
+		os.Exit(1)
 	}
 }
